@@ -36,6 +36,8 @@ def rendement(n, l, alpha, C, N, mu, fn, A, fg, i):
         ) / (fn + A)
 
 
+import requests
+
 def get_dvf_data(commune_code, annee_min, annee_max):
     url = "https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?"
     params = {
@@ -43,14 +45,25 @@ def get_dvf_data(commune_code, annee_min, annee_max):
         "anneemut_max": annee_max,
         "code_insee": commune_code,
     }
-    response = requests.get(url, params=params)
-
-    if response.status_code == 200:
-        data = response.json()["features"]
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json().get("features", [])
         return data
-    else:
-        print("Erreur lors de la récupération des données")
-        return None
+        
+    except requests.exceptions.Timeout:
+        print(f"Timeout: Le serveur a pris trop de temps pour répondre pour la commune {commune_code}.")
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur lors de la récupération des données pour la commune {commune_code} : {e}")
+        
+    except ValueError as ve:
+        print(f"Erreur de traitement des données JSON pour la commune {commune_code} : {ve}")
+
+    return None
+
 
 
 def calculate_price_per_sqm(data):
