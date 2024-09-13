@@ -1,5 +1,27 @@
-import numpy as np
+import pandas as pd
 import requests
+
+
+def get_dvf_data(commune_code, annee_min, annee_max, timeout=2):
+    url = "https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?"
+    params = {
+        "anneemut_min": annee_min,
+        "anneemut_max": annee_max,
+        "code_insee": commune_code,
+    }
+
+    response = requests.get(url, params=params, timeout=timeout).json()
+    features = response["features"]
+    while response["next"]:
+        response = requests.get(response["next"], timeout=timeout).json()
+        features = features + response["features"]
+    return features
+
+
+def export_dvf_data(commune_code):
+    dvf_data = get_dvf_data(commune_code, 2014, 2024)
+    dvf_data = pd.json_normalize(dvf_data, sep="_")
+    dvf_data.to_csv(f"Data/valeurs foncières/{commune_code}.csv", index=False)
 
 
 def mensualité(alpha, C, N):
@@ -34,63 +56,3 @@ def rendement(n, l, alpha, C, N, mu, fn, A, fg, i):
             - Cn
             - (fn + A)
         ) / (fn + A)
-
-
-import requests
-
-def get_dvf_data(commune_code, annee_min, annee_max):
-    url = "https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/?"
-    params = {
-        "anneemut_min": annee_min,
-        "anneemut_max": annee_max,
-        "code_insee": commune_code,
-    }
-    
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json().get("features", [])
-        return data
-        
-    except requests.exceptions.Timeout:
-        print(f"Timeout: Le serveur a pris trop de temps pour répondre pour la commune {commune_code}.")
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Erreur lors de la récupération des données pour la commune {commune_code} : {e}")
-        
-    except ValueError as ve:
-        print(f"Erreur de traitement des données JSON pour la commune {commune_code} : {ve}")
-
-    return None
-
-
-
-def calculate_price_per_sqm(data):
-    if not data:
-        return None
-
-    records = []
-    for item in data:
-        properties_item = item.get("properties")
-        surface_bati = properties_item.get("sbati")
-        surface_terrain = properties_item.get("sterr")
-        valeur_fonciere = properties_item.get("valeurfonc")
-        if (surface_terrain or surface_bati) and valeur_fonciere:
-            if float(surface_bati) + float(surface_terrain) != 0:
-                price_per_sqm = float(valeur_fonciere) / (
-                    float(surface_bati) + float(surface_terrain)
-                )
-                records.append(price_per_sqm)
-
-    if records:
-        return np.mean(records)
-    else:
-        return None
-
-
-def get_avg_price_per_sqm_by_commune(commune_code, start_date, end_date):
-    dvf_data = get_dvf_data(commune_code, start_date, end_date)
-    avg_price_sqm = calculate_price_per_sqm(dvf_data)
-
-    return avg_price_sqm
