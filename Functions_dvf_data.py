@@ -138,7 +138,11 @@ def consolidate_dvf_data_France():
     for entry in os.scandir(f"{data_dvf_path}"):
         if entry.is_file() and entry.name.endswith(".csv"):
             try:
-                df_dep = pd.read_csv(entry.path, skip_blank_lines=True)
+                df_dep = pd.read_csv(
+                    entry.path,
+                    dtype={"properties_coddep": str},
+                    skip_blank_lines=True,
+                )
                 all_dfs.append(df_dep)
             except Exception as e:
                 pass
