@@ -10,23 +10,21 @@ def c(n, alpha, C, N):
         return 0
 
 
-def rendement(n, l, alpha, C, N, mu, fn, A, fg, i):
-    m = mensualité(alpha, C, N)
-    Cn = c(n, alpha, C, N)
-    if (
-        n <= 12 * N
-    ):  # On généralise la formule après avori remboursé la totalité du prêt
-        return (
-            n * (l * (1 - i) - m - fg * l)
-            + C * (1 + mu) ** (n / 12)
-            - Cn
-            - (fn + A)
-        ) / (fn + A)
-    else:
-        return (
-            n * (l * (1 - i) - fg * l)
-            - 12 * N * m
-            + C * (1 + mu) ** (n / 12)
-            - Cn
-            - (fn + A)
-        ) / (fn + A)
+def rendement_1(fn, A, n, l, C, fg, i, alpha, N, mu):
+    loyer = n*(1-fg-i)*l/C
+    taux_apport = (fn+A)/C
+    paiement_mens = alpha*n/12/(1-(1+alpha/12)**(-12*N))
+    valeur_bien = (1+mu/12)**(n)
+    dette = ((1+alpha/12)**n-(1+alpha/12)**(12*N))/(1-(1+alpha/12)**(12*N))
+    
+    return taux_apport, loyer, paiement_mens, valeur_bien, dette
+
+
+def rendement_2(perc, rho, n, fg, i, alpha, N, mu):
+    loyer = n*(1-fg-i)*rho
+    taux_apport = perc
+    paiement_mens = alpha*n/12/(1-(1+alpha/12)**(-12*N))
+    valeur_bien = (1+mu/12)**(n)
+    dette = ((1+alpha/12)**n-(1+alpha/12)**(12*N))/(1-(1+alpha/12)**(12*N))
+    
+    return taux_apport, loyer, paiement_mens, valeur_bien, dette
