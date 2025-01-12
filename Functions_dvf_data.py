@@ -1,11 +1,8 @@
 import os
-
 import pandas as pd
 import requests
 from tqdm import tqdm
-
 from config import data_dvf_path, data_path, file_INSEE
-
 
 # Download data from dvf database
 def create_data_folder() -> None:
@@ -14,13 +11,14 @@ def create_data_folder() -> None:
     dep_INSEE = set(pd.read_csv(f"{data_path}/{file_INSEE}")["DEP"].to_list())
     to_remove = ["971", "972", "973", "974", "976"]
     dep_INSEE = [dep for dep in dep_INSEE if dep not in to_remove]
+    dep_INSEE=["75"]
+
     for dep in dep_INSEE:
         if not os.path.exists(f"{data_dvf_path}/{dep}"):
             os.makedirs(f"{data_dvf_path}/{dep}")
     os.rmdir(f"{data_dvf_path}/nan")
     if os.path.exists(f"{data_dvf_path}/20"):
         os.rmdir(f"{data_dvf_path}/20")
-
 
 def get_dvf_data_com(
     commune_code: str, annee_min: str, annee_max: str, timeout=2
@@ -39,16 +37,14 @@ def get_dvf_data_com(
         features = features + response["features"]
     return features
 
-
 def export_dvf_data(commune_code: str) -> pd.DataFrame:
-    dvf_data = get_dvf_data_com(commune_code, 2014, 2024)
+    dvf_data = get_dvf_data_com(commune_code, 2010, 2025)
     dvf_data = pd.json_normalize(dvf_data, sep="_")
     dvf_data.to_csv(
         f"{data_dvf_path}{commune_code[:2]}/{commune_code}.csv",
         index=False,
     )
     return dvf_data
-
 
 def get_dvf_data():
     create_data_folder()
@@ -65,11 +61,6 @@ def get_dvf_data():
         except Exception as e:
             pass
 
-
-# get_dvf_data()
-
-
-# Consolidate and export data
 def consolidate_dvf_data_dep(dep: str) -> pd.DataFrame:
     all_dfs = []
     for entry in os.scandir(f"{data_dvf_path}{dep}"):
@@ -126,14 +117,12 @@ def consolidate_dvf_data_dep(dep: str) -> pd.DataFrame:
     else:
         return None
 
-
 def consolidate_dvf_data_deps() -> None:
     for directory in tqdm(os.scandir(f"{data_dvf_path}")):
         if directory.is_dir():
             consolidate_dvf_data_dep(directory.name)
 
-
-def consolidate_dvf_data_France():
+def consolidate_dvf_data_France() -> pd.DataFrame:
     all_dfs = []
     for entry in os.scandir(f"{data_dvf_path}"):
         if entry.is_file() and entry.name.endswith(".csv"):
@@ -174,5 +163,3 @@ def consolidate_dvf_data_France():
         return None
 
 
-# consolidate_dvf_data_deps()
-consolidate_dvf_data_France()
